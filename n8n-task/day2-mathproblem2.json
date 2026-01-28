@@ -1,0 +1,248 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "values": {
+                    "number": [
+                        {
+                            "name": "days_per_month",
+                            "value": 30
+                        },
+                        {
+                            "name": "zapier_cost_per_task",
+                            "value": 0.01
+                        },
+                        {
+                            "name": "n8n_cost_per_month",
+                            "value": 50
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "da2f790d-83f7-42de-98ca-91a99d5bbbd7",
+            "name": "Cost Constants",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                720,
+                32
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const scenario = $input.first().json.Scenario;\nconst emailsPerDay = $input.first().json['Emails/Day'];\nconst tasksPerEmail =$input.first().json['Tasks/mail'];\nconst daysPerMonth = $input.first().json.days_per_month;\nconst zapierCostPerTask = $input.first().json.zapier_cost_per_task;\nconst n8nCost = $input.first().json.n8n_cost_per_month;\nconst tasksPerDay = emailsPerDay * tasksPerEmail;\nconst tasksPerMonth = tasksPerDay * daysPerMonth;\nconst zapierCostPerMonth = tasksPerMonth * zapierCostPerTask;\nconst savingsPerMonth = zapierCostPerMonth - n8nCost;\n\nreturn [{\n  json: {\n    scenario,\n    emails_per_day: emailsPerDay,\n    tasks_per_email: tasksPerEmail,\n    tasks_per_day: tasksPerDay,\n    tasks_per_month: tasksPerMonth,\n    zapier_cost_per_month: zapierCostPerMonth,\n    n8n_cost_per_month: n8nCost,\n    savings_per_month: savingsPerMonth\n  }\n}];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                928,
+                32
+            ],
+            "id": "c118f09a-ba62-4085-9b5d-95c61c1bbdd9",
+            "name": "Code in JavaScript"
+        },
+        {
+            "parameters": {
+                "formTitle": "Email Processing Cost Calculation",
+                "formFields": {
+                    "values": [
+                        {
+                            "fieldLabel": "Scenario"
+                        },
+                        {
+                            "fieldLabel": "Emails/Day"
+                        },
+                        {
+                            "fieldLabel": "Tasks/mail"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.formTrigger",
+            "typeVersion": 2.5,
+            "position": [
+                464,
+                32
+            ],
+            "id": "3fb83490-0c51-4eae-8d77-e24f95c19883",
+            "name": "On form submission",
+            "webhookId": "ece5cc1b-14c9-4622-8668-04f6177e419b"
+        },
+        {
+            "parameters": {
+                "operation": "appendOrUpdate",
+                "documentId": {
+                    "__rl": true,
+                    "value": "1GV2uPX3rRjl8Pd_brCsPRysKfdYnsYC_L-fA06ZZrIQ",
+                    "mode": "list",
+                    "cachedResultName": "Math Problem",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GV2uPX3rRjl8Pd_brCsPRysKfdYnsYC_L-fA06ZZrIQ/edit?usp=drivesdk"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "gid=0",
+                    "mode": "list",
+                    "cachedResultName": "Sheet1",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GV2uPX3rRjl8Pd_brCsPRysKfdYnsYC_L-fA06ZZrIQ/edit#gid=0"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "Scenario": "={{ $json.scenario }}",
+                        "Emails/day": "={{ $json.emails_per_day }}",
+                        "Tasks/Email": "={{ $json.tasks_per_email }}",
+                        "Tasks/Day": "={{ $json.tasks_per_day }}",
+                        "Tasks/Month": "={{ $json.tasks_per_month }}",
+                        "n8n Cost / Month": "={{ $json.n8n_cost_per_month }}",
+                        "Zapier Cost/ Month": "={{ $json.zapier_cost_per_month }}",
+                        "Savings/ Month": "={{ $json.savings_per_month }}"
+                    },
+                    "matchingColumns": [
+                        "Scenario"
+                    ],
+                    "schema": [
+                        {
+                            "id": "Scenario",
+                            "displayName": "Scenario",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Emails/day",
+                            "displayName": "Emails/day",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Tasks/Email",
+                            "displayName": "Tasks/Email",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Tasks/Day",
+                            "displayName": "Tasks/Day",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Tasks/Month",
+                            "displayName": "Tasks/Month",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Zapier Cost/ Month",
+                            "displayName": "Zapier Cost/ Month",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "n8n Cost / Month",
+                            "displayName": "n8n Cost / Month",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        },
+                        {
+                            "id": "Savings/ Month",
+                            "displayName": "Savings/ Month",
+                            "required": false,
+                            "defaultMatch": false,
+                            "display": true,
+                            "type": "string",
+                            "canBeUsedToMatch": true,
+                            "removed": false
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.7,
+            "position": [
+                1136,
+                32
+            ],
+            "id": "8f8a6d22-a2aa-4b4a-b6ed-856357b1c7b3",
+            "name": "Append or update row in sheet",
+            "credentials": {
+                "googleSheetsOAuth2Api": {
+                    "id": "xDz32a80Eh0mnwzy",
+                    "name": "Google Sheets account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Cost Constants": {
+            "main": [
+                [
+                    {
+                        "node": "Code in JavaScript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Code in JavaScript": {
+            "main": [
+                [
+                    {
+                        "node": "Append or update row in sheet",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "On form submission": {
+            "main": [
+                [
+                    {
+                        "node": "Cost Constants",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "be767ea5e304c4d84039aca9e5395fde84e5f9f08c9a4ff7c968d005ba2ccc44"
+    }
+}

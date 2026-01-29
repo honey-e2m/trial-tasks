@@ -1,0 +1,69 @@
+:root {
+  /* HSL Color Palette */
+  --primary: 217 91% 60%; /* Vibrant Blue */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --accent: 199 89% 48%; /* E2M Cyan-ish */
+  --accent-foreground: 0 0% 100%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --radius: 0.75rem;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Dark Mode Variables (Optional but good for premium feel) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: 217 91% 60%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* Utility for premium buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.btn-primary {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 4px 14px 0 rgba(0, 118, 255, 0.39);
+}
+
+.btn-primary:hover {
+  background-color: hsl(217 91% 55%);
+  transform: translateY(-1px);
+}

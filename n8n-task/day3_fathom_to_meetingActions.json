@@ -1,0 +1,359 @@
+{
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "139dface-eb23-4964-965e-8a3c590105a1",
+            "name": "When clicking 'Execute workflow'",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                -704,
+                -96
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const transcriptArray = $input.first().json.transcript;\n\n// Combine all transcript text into one string\nconst fullTranscript = transcriptArray\n  .map(item => item.text)\n  .join(\" \");\n\n// Remove timestamps like [00:12] or [1:03] if present\nconst cleanedTranscript = fullTranscript.replace(/\\[\\d{1,2}:\\d{2}\\]/g, '');\n\nreturn [\n  {\n    cleanedTranscript: cleanedTranscript.trim()\n  }\n];\n"
+            },
+            "id": "ae32f082-ec28-45bc-a9dd-7b0639edc1de",
+            "name": "preprocessing - removes timestamp",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -480,
+                -96
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Your AI Agent output is a STRING containing a JSON array\nconst raw = $input.first().json.output;\n\n// Parse the JSON string safely\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  throw new Error(\"Failed to parse AI output JSON\");\n}\n\n// Ensure it's an array\nif (!Array.isArray(parsed)) {\n  throw new Error(\"Parsed output is not an array\");\n}\n\n// Normalize into clean items for looping\nreturn parsed.map(item => ({\n  actionItem: item.task || item,\n  assignee: item.assignee || \"Unassigned\",\n  deadline: item.deadline || \"Not specified\",\n  priority: item.priority || \"Medium\"\n}));\n"
+            },
+            "id": "9a2384a3-bb81-4f94-b05a-ca4261682c4d",
+            "name": "Code in JavaScript",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                96,
+                -96
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=You are an expert meeting analyst. Your task is to extract all ACTION ITEMS from the following meeting transcript.\n\nAn action item is any task, commitment, or follow-up that someone needs to complete.\n\nFor each action item, extract:\n1. **task**: A clear, concise description of what needs to be done\n2. **assignee**: The person responsible (if mentioned, otherwise \"Unassigned\")\n3. **deadline**: Any mentioned deadline or timeframe (if mentioned, otherwise \"Not specified\")\n4. **priority**: Estimate priority as \"High\", \"Medium\", or \"Low\" based on context\n\nIMPORTANT: Return your response as a valid JSON array only, with no additional text or markdown formatting.\n\nExample output format:\n[\n  {\n    \"task\": \"Complete API documentation\",\n    \"assignee\": \"Bob\",\n    \"deadline\": \"Friday\",\n    \"priority\": \"High\"\n  }\n]\n\n---\n\nTRANSCRIPT:\n{{ $json.cleanedTranscript }}\n\n---\n\nExtract all action items from this transcript and return ONLY the JSON array:",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3.1,
+            "position": [
+                -256,
+                -96
+            ],
+            "id": "fc7f296b-0ff2-4dd2-b907-add9b1fd31f4",
+            "name": "AI Agent1"
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 3,
+            "position": [
+                320,
+                -96
+            ],
+            "id": "279393db-5af3-4599-9e90-e0b62fac3e99",
+            "name": "Loop Over Items"
+        },
+        {
+            "parameters": {
+                "options": {
+                    "maxTokens": 1024
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+            "typeVersion": 1,
+            "position": [
+                -400,
+                112
+            ],
+            "id": "4226a646-5918-4e2d-8bca-4016bc60df73",
+            "name": "OpenRouter Chat Model",
+            "credentials": {
+                "openRouterApi": {
+                    "id": "bCTgWiJvmbtzLlSt",
+                    "name": "OpenRouter account"
+                }
+            }
+        },
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.noOp",
+            "typeVersion": 1,
+            "position": [
+                528,
+                -192
+            ],
+            "id": "f7dc98fb-2b2c-4d10-8673-fe9bc6871392",
+            "name": "No Operation, do nothing"
+        },
+        {
+            "parameters": {
+                "operation": "create",
+                "base": {
+                    "__rl": true,
+                    "value": "appmXalstadaPYTLi",
+                    "mode": "list",
+                    "cachedResultName": "Fathom Workflow Lab",
+                    "cachedResultUrl": "https://airtable.com/appmXalstadaPYTLi"
+                },
+                "table": {
+                    "__rl": true,
+                    "value": "tbls5XfOj7XBpmzbS",
+                    "mode": "list",
+                    "cachedResultName": "Action Items",
+                    "cachedResultUrl": "https://airtable.com/appmXalstadaPYTLi/tbls5XfOj7XBpmzbS"
+                },
+                "columns": {
+                    "mappingMode": "defineBelow",
+                    "value": {
+                        "Action Item Text": "={{ $json.actionItem }}",
+                        "Assigned To": "={{ $json.assignee }}",
+                        "Priority": "={{ $json.priority }}",
+                        "Due Date": "={{ $json.deadline }}"
+                    },
+                    "matchingColumns": [],
+                    "schema": [
+                        {
+                            "id": "Action Item Text",
+                            "displayName": "Action Item Text",
+                            "required": false,
+                            "defaultMatch": false,
+                            "canBeUsedToMatch": true,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "Priority",
+                            "displayName": "Priority",
+                            "required": false,
+                            "defaultMatch": false,
+                            "canBeUsedToMatch": true,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "Assigned To",
+                            "displayName": "Assigned To",
+                            "required": false,
+                            "defaultMatch": false,
+                            "canBeUsedToMatch": true,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        },
+                        {
+                            "id": "Due Date",
+                            "displayName": "Due Date",
+                            "required": false,
+                            "defaultMatch": false,
+                            "canBeUsedToMatch": true,
+                            "display": true,
+                            "type": "string",
+                            "readOnly": false,
+                            "removed": false
+                        }
+                    ],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": false
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.airtable",
+            "typeVersion": 2.1,
+            "position": [
+                528,
+                0
+            ],
+            "id": "03cead3c-8061-4b4d-964a-e0901bfa5cce",
+            "name": "Create a record",
+            "credentials": {
+                "airtableTokenApi": {
+                    "id": "LAmbxnuyoAD5P2OK",
+                    "name": "Airtable Personal Access Token account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "When clicking 'Execute workflow'": {
+            "main": [
+                [
+                    {
+                        "node": "preprocessing - removes timestamp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "preprocessing - removes timestamp": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Code in JavaScript": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Over Items",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent1": {
+            "main": [
+                [
+                    {
+                        "node": "Code in JavaScript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop Over Items": {
+            "main": [
+                [
+                    {
+                        "node": "No Operation, do nothing",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Create a record",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenRouter Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent1",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create a record": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Over Items",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {
+        "When clicking 'Execute workflow'": [
+            {
+                "meeting_title": "Friday Marketing X E2M Weekly Call (Dummy)",
+                "meeting_date": "January 23",
+                "duration_minutes": 25,
+                "transcript": [
+                    {
+                        "timestamp": "00:00",
+                        "speaker": "Debra Scarpa",
+                        "text": "Good evening everyone. I’m really excited about the progress on the form and the detailed feedback implementation."
+                    },
+                    {
+                        "timestamp": "02:15",
+                        "speaker": "Manali Sharma",
+                        "text": "We made around 38 to 40 changes based on your feedback. Most items are done, with a few remaining that we’ll complete after testing."
+                    },
+                    {
+                        "timestamp": "04:30",
+                        "speaker": "Debra Scarpa",
+                        "text": "I want all form fields and buttons to be flush left for consistency, especially where icons were removed."
+                    },
+                    {
+                        "timestamp": "06:10",
+                        "speaker": "Manali Sharma",
+                        "text": "Understood. We’ll review all pages and ensure alignment issues are fixed across website and social media sections."
+                    },
+                    {
+                        "timestamp": "08:05",
+                        "speaker": "Shannon Bubb",
+                        "text": "For website pages, maybe we can add a page type dropdown like homepage, services, or product page along with a text field."
+                    },
+                    {
+                        "timestamp": "10:20",
+                        "speaker": "Debra Scarpa",
+                        "text": "I really like that idea. It will help categorize requests more clearly."
+                    },
+                    {
+                        "timestamp": "12:45",
+                        "speaker": "Manali Sharma",
+                        "text": "We also plan to remove redundant fields in the high-level request section and make all selection boxes square."
+                    },
+                    {
+                        "timestamp": "15:10",
+                        "speaker": "Debra Scarpa",
+                        "text": "Yes, all boxes should be square and aligned left. That consistency is important."
+                    },
+                    {
+                        "timestamp": "17:30",
+                        "speaker": "Manali Sharma",
+                        "text": "For scheduling meetings, should we create automatic calendar invites using your calendar initially?"
+                    },
+                    {
+                        "timestamp": "18:45",
+                        "speaker": "Debra Scarpa",
+                        "text": "Yes, let’s start with my calendar and we can change that later in settings."
+                    },
+                    {
+                        "timestamp": "20:10",
+                        "speaker": "Manali Sharma",
+                        "text": "We’ll do final testing today and aim to go live once UAT is complete."
+                    },
+                    {
+                        "timestamp": "22:40",
+                        "speaker": "Debra Scarpa",
+                        "text": "That sounds great. Please share a Loom video once everything is ready."
+                    },
+                    {
+                        "timestamp": "24:30",
+                        "speaker": "Asha Kumar",
+                        "text": "We’ll coordinate with the team and ensure all fixes are validated before launch."
+                    }
+                ]
+            }
+        ]
+    },
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "be767ea5e304c4d84039aca9e5395fde84e5f9f08c9a4ff7c968d005ba2ccc44"
+    }
+}

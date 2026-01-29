@@ -1,0 +1,141 @@
+{
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "fc91b599-38d7-49b9-9789-2c9e50add060",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                432,
+                -64
+            ]
+        },
+        {
+            "parameters": {
+                "aggregate": "aggregateAllItemData",
+                "options": {}
+            },
+            "id": "837636b8-44e6-469f-9b16-b0a4c42cbc20",
+            "name": "Aggregate",
+            "type": "n8n-nodes-base.aggregate",
+            "typeVersion": 1,
+            "position": [
+                640,
+                -64
+            ]
+        },
+        {
+            "parameters": {
+                "keepOnlySet": true,
+                "values": {
+                    "string": [
+                        {
+                            "name": "result",
+                            "value": "={{ $json.data.map(item => `${item.name} : ${item.qty}`).join('\\n') }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "87e43120-d5f0-4937-af30-cd793e660399",
+            "name": "Format Email Body",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                848,
+                -64
+            ]
+        },
+        {
+            "parameters": {
+                "fromEmail": "honey.arora@e2m.solutions",
+                "toEmail": "yashvi.thakkar@e2m.solutions",
+                "subject": "Notification",
+                "emailFormat": "text",
+                "text": "={{ $json.result }}",
+                "options": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.emailSend",
+            "typeVersion": 2.1,
+            "position": [
+                1056,
+                -64
+            ],
+            "id": "3ad21141-023f-4737-995d-1afadd98ecec",
+            "name": "Send email",
+            "webhookId": "d1b4b66c-1939-441e-80c4-c94a2c8a27c6",
+            "credentials": {
+                "smtp": {
+                    "id": "KPLZwC7rsV9TVorV",
+                    "name": "SMTP account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Aggregate",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Aggregate": {
+            "main": [
+                [
+                    {
+                        "node": "Format Email Body",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Email Body": {
+            "main": [
+                [
+                    {
+                        "node": "Send email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {
+        "Manual Trigger": [
+            {
+                "name": "Item A",
+                "qty": 2
+            },
+            {
+                "name": "Item B",
+                "qty": 5
+            },
+            {
+                "name": "Item C",
+                "qty": 1
+            },
+            {
+                "name": "Item D",
+                "qty": 4
+            },
+            {
+                "name": "Item E",
+                "qty": 3
+            }
+        ]
+    },
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "be767ea5e304c4d84039aca9e5395fde84e5f9f08c9a4ff7c968d005ba2ccc44"
+    }
+}

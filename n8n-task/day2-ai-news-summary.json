@@ -1,0 +1,295 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        480
+      ],
+      "id": "c7c952da-91bc-4b05-8a60-3e0838da782c",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.artificialintelligence-news.com/news/anthropic-selected-build-government-ai-assistant-pilot/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -560,
+        480
+      ],
+      "id": "5fe94618-81e3-4230-973a-17692145e534",
+      "name": "Scrap website"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get HTML and DEBUG what's actually there\nconst html = $input.first().json.html || $input.first().json.body || $input.first().json.data || '';\nconst url = $input.first().json.url || '';\n\nif (!html || html.length === 0) {\n  return [{ json: { error: 'No HTML input', url } }];\n}\n\nconst article = {\n  title: '',\n  content: '',\n  author: '',\n  date: '',\n  imageUrl: '',\n  url,\n  debug: {\n    htmlLength: html.length,\n    hasParagraphs: html.includes('<p>'),\n    hasDivs: html.includes('<div'),\n    hasArticle: html.includes('<article')\n  }\n};\n\n// ========== 1. FORCE TITLE EXTRACTION ==========\nconst allHeadings = html.match(/<h[1-6][^>]*>([\\s\\S]*?)<\\/h[1-6]>/gi) || [];\nconst titleCandidates = allHeadings.map(h => {\n  return (h.replace(/<[^>]*>/g, '').match(/[A-Z][a-zA-Z\\s\\-,]{10,100}/) || [''])[0];\n}).filter(t => t && t.length > 15 && !t.includes('Categories') && !t.includes('About'));\n\narticle.title = titleCandidates[0] || '';\n\n// ========== 2. NUCLEAR CONTENT EXTRACTION ==========\n// Strategy 1: Find ALL text between <p> tags\nlet content = '';\nconst paragraphs = html.match(/<p\\b[^<]*(?:(?!<\\/p\\b)[^<])*([^<]*(?:&[^;\\s]*;[^<]*)*)(?!<\\/p\\b)[^<]*<\\/p>/gi) || [];\n\nparagraphs.forEach(p => {\n  let text = p\n    .replace(/<a[^>]*>([^<]*)<\\/a>/gi, '$1')  // Keep link text\n    .replace(/<[^>]*>/g, ' ')                 // Remove all tags\n    .replace(/&nbsp;|&#160;/gi, ' ')\n    .replace(/&#8217;|&#x27;/gi, \"'\")\n    .replace(/&#8220;|&#8221;|\"/gi, '\"')\n    .replace(/&amp;/gi, '&')\n    .replace(/\\s+/g, ' ')\n    .trim();\n  \n  if (text.length > 30 && text.search(/[A-Za-z]{4,}/) > -1) {\n    content += text + '\\n\\n';\n  }\n});\n\n// Strategy 2: If no paragraphs, grab ALL text content\nif (content.length < 100) {\n  content = html\n    .replace(/<script\\b[\\s\\S]*?<\\/script>/gi, '')     // Remove scripts\n    .replace(/<style\\b[\\s\\S]*?<\\/style>/gi, '')      // Remove styles\n    .replace(/<!--[\\s\\S]*?-->/g, '')                // Remove comments\n    .replace(/<[^>]*>/g, ' ')                       // Remove ALL tags\n    .replace(/\\s+/g, ' ')\n    .trim();\n  \n  // Extract sentences (heuristic for real content)\n  const sentences = content.match(/[A-Z][^.!?]{50,}[.!?]+/g) || [];\n  content = sentences.slice(0, 20).join('\\n\\n');\n}\n\n// Strategy 3: FINAL fallback - grab ANY substantial text block\nif (content.length < 200) {\n  const textBlocks = html.match(/[a-zA-Z\\s\\-,]{100,1000}[.!?;]/g) || [];\n  content = textBlocks.slice(0, 15).join('\\n\\n');\n}\n\narticle.content = content.substring(0, 10000);\n\n// ========== 3. FORCE IMAGE ==========\nconst imgMatch = html.match(/https?:\\/\\/[^\"\\s<>]+\\.(?:png|jpg|jpeg|webp|gif)(?:\\?[^\"\\s<>]*)?(?=[ \"\\s<>])/i);\narticle.imageUrl = imgMatch ? imgMatch[0] : article.imageUrl;\n\n// ========== 4. FORCE AUTHOR ==========\nconst authorMatch = html.match(/(?:by|author|writer)[:\\s]*([A-Z][a-zA-Z\\s\\-\\.]{2,50})/i);\narticle.author = authorMatch ? authorMatch[1].trim() : '';\n\n// ========== 5. FORCE DATE ==========\nconst dateMatch = html.match(/\\d{4}-\\d{2}-\\d{2}|\\w+\\s+\\d{1,2},\\s+\\d{4}/);\narticle.date = dateMatch ? dateMatch[0] : article.date;\n\narticle.debug.contentLength = article.content.length;\narticle.debug.paragraphsFound = paragraphs.length;\n\nreturn [{ json: article }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        480
+      ],
+      "id": "53688eaa-17d4-4527-bdd2-64aeedef1537",
+      "name": "Filter content"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please provide a concise summary for below content:\n\n{{ $json.content }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -112,
+        208
+      ],
+      "id": "25eee7f6-54f2-4600-9569-161502ad8aae",
+      "name": "Summarize"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d54ed3d5-f4a4-41cc-86f3-76404efaf740",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "AI",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "eb820d86-c994-4693-91a5-dcf90607866e",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "artificial intelligence",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "cc31f5a0-f5a9-48aa-a840-15582494722e",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Machine Learning",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "b1d7eecd-075c-4d91-bbe4-d6252a6e44b6",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "Deep Learning",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "b64c3435-d2e4-497f-97ba-3566b10e5e81",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "=ML",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "46df9a80-71ea-4e31-86cd-6ecbe07d343d",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "dl",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -48,
+        640
+      ],
+      "id": "0a17522b-9d21-443c-965a-975add6cf887",
+      "name": "If AI Content"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "https://docs.google.com/document/d/15Fij4O50EtZ0YgAwjFYNjY6uHrtJPeIrnwjwsnOWBCE/edit?tab=t.0",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Title:{{ $json.title }}\n\nContent:\n\n{{ $json.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        272,
+        640
+      ],
+      "id": "8119a72e-187b-4ef4-8290-25a476ed3cec",
+      "name": "Insert into Word",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "WgHpS3WBnqiSynIN",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        448
+      ],
+      "id": "18139b8b-cd74-4414-8da7-748894f6d079",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "LXsUalLGEazuxiCu",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "honey.arora@e2m.solutions",
+        "toEmail": "honey51104@gmail.com",
+        "subject": "={{ $('Filter content').item.json.title }}",
+        "emailFormat": "text",
+        "text": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        208
+      ],
+      "id": "ccd3d6bb-76fe-4970-943a-1d6e6a5dbad9",
+      "name": "Send email",
+      "webhookId": "ba12263c-daa1-4acb-a9b8-72c1b5e6a6a2",
+      "credentials": {
+        "smtp": {
+          "id": "KPLZwC7rsV9TVorV",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Scrap website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrap website": {
+      "main": [
+        [
+          {
+            "node": "Filter content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter content": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If AI Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If AI Content": {
+      "main": [
+        [
+          {
+            "node": "Insert into Word",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert into Word": {
+      "main": [
+        []
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "be767ea5e304c4d84039aca9e5395fde84e5f9f08c9a4ff7c968d005ba2ccc44"
+  }
+}
